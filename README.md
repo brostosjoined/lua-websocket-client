@@ -1,7 +1,3 @@
-# Not maintained / maintainer wanted !!!!
-
-If someone wants to maintain / take ownership of this project, reach out to me (issue, email). I like Lua very much, but I don't have enough time / resources to stay engaged with it.
-
 # About
 
 This project provides Lua modules for [Websocket Version 13](http://tools.ietf.org/html/rfc6455) conformant clients and servers. 
@@ -14,7 +10,7 @@ Clients are available in three different flavours:
 
   - synchronous
   - coroutine based ([copas](http://keplerproject.github.com/copas))
-  - asynchronous ([lua-ev](https://github.com/brimworks/lua-ev))
+
 
 # Dependencies
 
@@ -24,14 +20,13 @@ The client and server modules depend on:
   - luabitop (if not using Lua 5.2 nor luajit)
   - luasec
   - copas (optionally)
-  - lua-ev (optionally)
 
 # Install
 
 ```shell
-$ git clone git://github.com/lipp/lua-websockets.git
-$ cd lua-websockets
-$ luarocks make rockspecs/lua-websockets-scm-1.rockspec
+$ git clone https://github.com/brostosjoined/lua-websocket-client.git
+$ cd lua-websocket-client
+$ luarocks make rockspecs/lua-websocket-client-scm-1.rockspec
 ```
 
 # Minify
@@ -46,15 +41,3 @@ $ squish --gzip
 The minifed version has be to be installed manually though.
 
 
-# Tests
-
-Running tests requires:
-
-  - [busted with async test support](https://github.com/lipp/busted)
-  - [Docker](http://www.docker.com)
-
-```shell
-docker build .
-```
-
-The first run will take A WHILE.

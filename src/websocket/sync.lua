@@ -5,7 +5,7 @@ local ssl = require'ssl'
 local tinsert = table.insert
 local tconcat = table.concat
 
-local receive = function(self)
+local receive = function(self, customTimeout)
   if self.state ~= 'OPEN' and not self.is_closing then
     return nil,nil,false,1006,'wrong state'
   end
@@ -22,9 +22,20 @@ local receive = function(self)
     return nil,nil,was_clean,code,reason or 'closed'
   end
   while true do
-    local chunk,err = self:sock_receive(bytes)
+    local chunk, err
+    if customTimeout then
+      self.sock:settimeout(customTimeout)
+      chunk,err = self:sock_receive(bytes)
+      self.sock:settimeout(self.originalTimeoutValue)
+    else
+      chunk,err = self:sock_receive(bytes)
+    end
     if err then
-      return clean(false,1006,err)
+      if customTimeout and (err == 'timeout' or err == 'wantread') then -- wantread in case of wss, timeout in case of ws
+        return nil,nil,true,1006,'customTimeout'
+      else
+        return clean(false,1006,err)
+      end
     end
     encoded = encoded..chunk
     local decoded,fin,opcode,_,masked = frame.decode(encoded)
@@ -117,22 +128,30 @@ local close = function(self,code,reason)
   return was_clean,code,reason or ''
 end
 
-local connect = function(self,ws_url,ws_protocol,ssl_params)
+local connect = function(self,ws_url,ws_protocol,ssl_params, headers)
   if self.state ~= 'CLOSED' then
     return nil,'wrong state',nil
   end
   local protocol,host,port,uri = tools.parse_url(ws_url)
+  self.protocol = protocol
+  self.ssl_params = ssl_params
   -- Preconnect (for SSL if needed)
-  local _,err = self:sock_connect(host,port)
+  local _,err = self:sock_connect(host,port,protocol)
   if err then
     return nil,err,nil
   end
   if protocol == 'wss' then
-    self.sock = ssl.wrap(self.sock, ssl_params)
-    self.sock:dohandshake()
+    local timeout = self.sock:gettimeout()
+    if not self.ssl_wrapped then
+      self.sock = ssl.wrap(self.sock, ssl_params)
+      self.sock:settimeout(timeout)
+      self.sock:sni(host)
+      self.sock:dohandshake()
+    end
   elseif protocol ~= "ws" then
     return nil, 'bad protocol'
   end
+  ws_protocol = ws_protocol or protocol
   local ws_protocols_tbl = {''}
   if type(ws_protocol) == 'string' then
       ws_protocols_tbl = {ws_protocol}
@@ -145,8 +164,10 @@ local connect = function(self,ws_url,ws_protocol,ssl_params)
     key = key,
     host = host,
     port = port,
+    userAgent = self.userAgent,
     protocols = ws_protocols_tbl,
-    uri = uri
+    uri = uri,
+    headers = headers
   }
   local n,err = self:sock_send(req)
   if n ~= #req then

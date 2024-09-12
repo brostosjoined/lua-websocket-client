@@ -44,12 +44,18 @@ local upgrade_request = function(req)
   local lines = {
     format('GET %s HTTP/1.1',req.uri or ''),
     format('Host: %s',req.host),
+    format('User-Agent: %s', req.userAgent or "lua-websocket"),
     'Upgrade: websocket',
     'Connection: Upgrade',
     format('Sec-WebSocket-Key: %s',req.key),
     format('Sec-WebSocket-Protocol: %s',table.concat(req.protocols,', ')),
     'Sec-WebSocket-Version: 13',
   }
+  if req.headers then
+    for header, value in pairs(req.headers) do
+      tinsert(lines,string.format("%s: %s", header, value))
+    end
+  end
   if req.origin then
     tinsert(lines,string.format('Origin: %s',req.origin))
   end

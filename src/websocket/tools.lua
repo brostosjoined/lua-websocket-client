@@ -65,6 +65,13 @@ if done then
   sha1_crypto = function(msg)
     return crypto.digest('sha1',msg,true)
   end
+else
+  done, openssl = pcall(require, 'openssl')
+  if done then
+    sha1_crypto = function(msg)
+      return openssl.digest.digest('sha1', msg, true)
+    end
+  end
 end
 
 -- from wiki article, not particularly clever impl
